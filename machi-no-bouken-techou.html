@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>まちの冒険手帳 | 家族でおでかけイベント帳</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3E8E5B">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="冒険手帳">
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBHLypMznAr-tUeLmLU4wez8A_6uSOEukc&loading=async&callback=console.debug" async defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FBF8F1;
+    --paper-card:#FFFFFF;
+    --ink:#2B3A2E;
+    --line:#E4DFCE;
+    --line-strong:#CFC8AF;
+    --stamp:#FFFDF6;
+    --shadow-soft: 0 2px 0 rgba(43,58,46,0.08);
+    --moss:#3E8E5B;
+    --moss-dark:#245C38;
+    --mustard:#E8A33D;
+    --mustard-dark:#8A5A16;
+    --indigo:#33628A;
+    --indigo-dark:#1E3C55;
+    --raspberry:#D45D74;
+    --raspberry-dark:#8C2E42;
+    --season-accent:#3E8E5B;
+    --season-accent-dark:#245C38;
+    --season-wash:#EAF6FF;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    background-image:linear-gradient(180deg, var(--season-wash) 0%, var(--paper) 320px);
+    color:var(--ink);
+    font-family:'Zen Maru Gothic', sans-serif;
+    line-height:1.6;
+    transition:background-image .5s ease;
+  }
+  h1,h2,h3,.display{
+    font-family:'Kaisei Decol', serif;
+    letter-spacing:0.02em;
+  }
+  a{color:var(--indigo);}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px 80px;}
+
+  /* ---------- Header / seasonal photo ---------- */
+  header.hero{
+    position:relative;
+    overflow:hidden;
+    min-height:320px;
+    display:flex;
+    align-items:flex-end;
+    background-size:cover;
+    background-position:center;
+    transition:background-image .6s ease;
+  }
+  header.hero .scrim{
+    position:absolute;inset:0;
+    background:linear-gradient(100deg, rgba(15,25,20,0.62) 0%, rgba(15,25,20,0.34) 45%, rgba(15,25,20,0.08) 75%);
+  }
+  header.hero .photo-credit{
+    position:absolute;right:10px;bottom:6px;z-index:2;
+    font-size:10.5px;color:rgba(255,255,255,0.75);
+  }
+  header.hero .photo-credit a{color:rgba(255,255,255,0.85);}
+
+  .hero-inner{position:relative;z-index:2;padding:34px 24px 30px;width:100%;}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:13px;letter-spacing:0.08em;
+    background:rgba(255,255,255,0.22);
+    color:#fff;
+    padding:5px 14px;border-radius:100px;
+    margin-bottom:16px;
+    backdrop-filter:blur(2px);
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:#FFE38A;}
+  h1.title{font-size:clamp(28px,4.4vw,42px);margin:0 0 10px;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,0.25);}
+  .sub{font-size:15px;max-width:560px;color:#F3F1E6;margin:0 0 22px;text-shadow:0 1px 6px rgba(0,0,0,0.2);}
+  .stat-row{display:flex;gap:28px;flex-wrap:wrap;margin-top:22px;}
+  .stat .num{font-family:'Kaisei Decol',serif;font-size:26px;color:#FFE38A;}
+  .stat .lbl{font-size:12.5px;color:#F0EEE2;}
+
+  /* ---------- Controls ---------- */
+  .panel{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:20px 22px;
+    margin-top:-30px;
+    position:relative;
+    z-index:3;
+    box-shadow:var(--shadow-soft);
+  }
+  .panel h3{margin:0 0 10px;font-size:15px;color:var(--season-accent-dark);}
+  .region-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .region-btn{
+    font-family:'Zen Maru Gothic',sans-serif;
+    font-size:13px;
+    padding:7px 14px;
+    border-radius:100px;
+    border:1.5px solid var(--line-strong);
+    background:#fff;
+    color:var(--ink);
+    cursor:pointer;
+    transition:all .15s ease;
+  }
+  .region-btn.active{background:var(--season-accent);border-color:var(--season-accent);color:#fff;}
+  .region-btn:hover{border-color:var(--season-accent);}
+
+  .filter-grid{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;margin-top:6px;}
+  .field{display:flex;flex-direction:column;gap:6px;}
+  .field label{font-size:12px;color:#68705F;}
+  select{
+    font-family:'Zen Maru Gothic',sans-serif;
+    font-size:14px;
+    padding:8px 12px;
+    border-radius:8px;
+    border:1.5px solid var(--line-strong);
+    background:#fff;
+    color:var(--ink);
+    min-width:160px;
+  }
+  .chip-group{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{
+    font-size:12.5px;
+    padding:6px 12px;
+    border-radius:100px;
+    border:1.5px solid var(--line-strong);
+    background:#fff;
+    cursor:pointer;
+    user-select:none;
+    white-space:nowrap;
+  }
+  .chip[data-active="true"]{color:#fff;border-color:transparent;}
+  .chip.cat[data-active="true"]{background:var(--moss);}
+  .chip.age[data-active="true"]{background:var(--raspberry);}
+
+  .view-toggle{display:flex;gap:0;margin-left:auto;border:1.5px solid var(--line-strong);border-radius:8px;overflow:hidden;}
+  .view-toggle button{
+    border:none;background:#fff;padding:8px 16px;font-family:'Zen Maru Gothic',sans-serif;
+    font-size:13.5px;cursor:pointer;color:var(--ink);
+  }
+  .view-toggle button.active{background:var(--mustard);color:#4A2E00;}
+
+  /* ---------- Calendar ---------- */
+  .cal-nav{display:flex;align-items:center;justify-content:space-between;margin:26px 0 14px;}
+  .cal-nav button{
+    border:1.5px solid var(--line-strong);background:#fff;border-radius:8px;
+    padding:6px 12px;cursor:pointer;font-size:15px;
+  }
+  .cal-nav .month-label{font-family:'Kaisei Decol',serif;font-size:20px;color:var(--season-accent-dark);display:flex;align-items:center;gap:8px;}
+  .season-badge{font-size:13px;background:var(--season-wash);color:var(--season-accent-dark);padding:3px 10px;border-radius:100px;}
+  .cal-grid{
+    display:grid;grid-template-columns:repeat(7,1fr);
+    border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--paper-card);
+  }
+  .cal-dow{
+    text-align:center;font-size:12px;padding:8px 0;color:#68705F;
+    background:#F1EEDF;border-bottom:1px solid var(--line);
+  }
+  .cal-dow.sun{color:var(--raspberry-dark);}
+  .cal-dow.sat{color:var(--indigo-dark);}
+  .cal-cell{
+    min-height:84px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+    padding:6px 6px;position:relative;cursor:pointer;transition:background .12s;
+  }
+  .cal-cell:hover{background:#F5F7EC;}
+  .cal-cell:nth-child(7n){border-right:none;}
+  .cal-cell.empty{background:#F9F8F2;cursor:default;}
+  .cal-cell .d-num{font-size:12.5px;color:#7A8072;}
+  .cal-cell.today .d-num{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:20px;height:20px;border-radius:50%;background:var(--season-accent);color:#fff;
+  }
+  .cal-dots{display:flex;flex-wrap:wrap;gap:3px;margin-top:6px;}
+  .cal-dots span{width:7px;height:7px;border-radius:50%;display:inline-block;}
+  .dot-free{background:var(--moss);}
+  .dot-nature{background:var(--mustard);}
+  .dot-indoor{background:var(--indigo);}
+  .dot-workshop{background:var(--raspberry);}
+  .cal-more{font-size:10.5px;color:#918C78;margin-top:2px;}
+
+  /* ---------- Day panel / list ---------- */
+  .day-panel{margin-top:22px;}
+  .day-panel h3{font-size:16px;color:var(--season-accent-dark);margin-bottom:10px;}
+  .card-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-top:16px;}
+  .event-card{
+    background:var(--stamp);
+    border:1.5px dashed var(--line-strong);
+    border-radius:12px;
+    padding:16px 18px;
+    position:relative;
+  }
+  .event-card::before,.event-card::after{
+    content:"";position:absolute;width:14px;height:14px;border-radius:50%;
+    background:var(--paper);top:50%;transform:translateY(-50%);
+  }
+  .event-card::before{left:-8px;}
+  .event-card::after{right:-8px;}
+  .ev-date{font-size:12px;color:var(--season-accent-dark);font-weight:500;margin-bottom:4px;}
+  .ev-title{font-family:'Kaisei Decol',serif;font-size:17px;margin:0 0 6px;color:var(--ink);}
+  .ev-place{font-size:13px;color:#68705F;margin-bottom:8px;}
+  .ev-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+  .tag{font-size:11px;padding:3px 9px;border-radius:100px;color:#fff;}
+  .tag.free{background:var(--moss);}
+  .tag.nature{background:var(--mustard);color:#4A2E00;}
+  .tag.indoor{background:var(--indigo);}
+  .tag.workshop{background:var(--raspberry);}
+  .tag.outdoor{background:#5FA05C;}
+  .tag.age{background:#fff;color:var(--ink);border:1px solid var(--line-strong);}
+  .ev-desc{font-size:13.5px;color:#3C4636;margin-bottom:10px;}
+  .ev-weather{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:12.5px;color:var(--indigo-dark);
+    background:#EAF2F8;border-radius:8px;padding:5px 10px;
+  }
+  .ev-weather.muted{color:#8A8578;background:#F1EFE4;}
+  .ev-actions{display:flex;gap:8px;margin-top:12px;}
+  .ev-btn{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:12px;font-family:'Zen Maru Gothic',sans-serif;
+    padding:6px 11px;border-radius:8px;border:none;cursor:pointer;
+    text-decoration:none;
+  }
+  .ev-btn.line{background:#06C755;color:#fff;}
+  .ev-btn.save{background:#fff;color:var(--ink);border:1.5px solid var(--line-strong);}
+  .ev-btn.save[data-saved="true"]{background:var(--raspberry);color:#fff;border-color:transparent;}
+
+  .empty-state{
+    text-align:center;padding:50px 20px;color:#79806E;
+  }
+  .empty-state .big{font-size:36px;margin-bottom:8px;}
+
+  footer.note{
+    margin-top:50px;padding-top:22px;border-top:1px dashed var(--line-strong);
+    font-size:12.5px;color:#83795F;
+  }
+  @media (max-width:640px){
+    .cal-cell{min-height:64px;}
+    .stat-row{gap:18px;}
+    .filter-grid{gap:12px;}
+    header.hero{min-height:260px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero" id="heroHeader">
+  <div class="scrim"></div>
+  <div class="hero-inner">
+    <div class="eyebrow"><span class="dot"></span>未就学児〜小学生の家族向け・千葉県 & 茨城県</div>
+    <h1 class="title">まちの冒険手帳</h1>
+    <p class="sub">お金をかけなくても遊べる場所、自然とふれあえる体験を、千葉県・茨城県から探して、カレンダーでまとめて確認。季節ごとの景色も感じながら、次のおでかけを計画しましょう。</p>
+    <div class="stat-row">
+      <div class="stat"><div class="num" id="stat-total">-</div><div class="lbl">掲載イベント数(サンプル)</div></div>
+      <div class="stat"><div class="num" id="stat-free">-</div><div class="lbl">無料で遊べる</div></div>
+      <div class="stat"><div class="num" id="stat-pref">-</div><div class="lbl">開催エリア数</div></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="panel">
+    <h3>都道府県からさがす</h3>
+
+    <div class="filter-grid">
+      <div class="field">
+        <label>都道府県</label>
+        <select id="prefSelect"></select>
+      </div>
+      <div class="field">
+        <label>カテゴリ</label>
+        <div class="chip-group" id="catChips"></div>
+      </div>
+      <div class="field">
+        <label>対象年齢</label>
+        <div class="chip-group" id="ageChips"></div>
+      </div>
+      <div class="view-toggle">
+        <button id="btnCal" class="active">カレンダー表示</button>
+        <button id="btnList">リスト表示</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:18px;">
+    <h3>📍 現在地から近いイベントを探す</h3>
+    <p style="font-size:12.5px;color:#68705F;margin:0 0 12px;">位置情報の利用を許可すると、現在地に近い順にイベントを並べて地図に表示します。</p>
+    <button id="btnLocate" class="region-btn" style="background:var(--season-accent);color:#fff;border-color:var(--season-accent);">現在地から探す</button>
+    <div id="mapMsg" style="font-size:12.5px;color:#68705F;margin-top:8px;"></div>
+    <div id="mapEl" style="display:none;height:320px;border-radius:12px;margin-top:14px;border:1px solid var(--line);"></div>
+    <div id="nearbyList" class="card-list" style="margin-top:14px;"></div>
+  </div>
+
+  <div id="calendarView">
+    <div class="cal-nav">
+      <div class="month-label"><span id="monthLabel"></span><span class="season-badge" id="seasonBadge"></span></div>
+      <div style="display:flex;gap:8px;">
+        <button id="prevMonth">&larr; 前の月</button>
+        <button id="nextMonth">次の月 &rarr;</button>
+      </div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="day-panel" id="dayPanel"></div>
+  </div>
+
+  <div id="listView" style="display:none;">
+    <div class="card-list" id="listCards"></div>
+  </div>
+
+  <footer class="note">
+    ※これはプロトタイプです。表示されているイベントは千葉県・茨城県を想定した操作性確認用のサンプルデータで、実在しないものも含みます。季節の背景写真は、商用利用も含めて無料で使用が許可されているPexelsの素材を使用しています(各写真の撮影者はヘッダー右下に表示)。天気情報はOpen-Meteo社の無料APIから取得しており、実際の予報が発表される期間(おおむね開催日の16日前から)のみ表示されます。「保存する」ボタンはこの端末内(ブラウザのlocalStorage)に保存され、他の端末とは共有されません。地図表示(現在地から近いイベント探し)は、Google Maps APIキー設定後に追加予定です。実データの自動収集には、千葉県・茨城県のオープンデータや各種サイトとの継続的な連携が必要です。
+  </footer>
+  <p style="text-align:center;font-size:12px;color:#9A927A;margin-top:-10px;">📲 スマホでこのページを開き、共有メニューから「ホーム画面に追加」するとアプリのように使えます。</p>
+</div>
+
+<script>
+const ALL_PREFS = ["千葉県","茨城県"];
+
+const PREF_COORDS = {
+  "北海道":[43.0642,141.3469],"青森県":[40.8244,140.7400],"岩手県":[39.7036,141.1527],
+  "宮城県":[38.2688,140.8721],"秋田県":[39.7186,140.1024],"山形県":[38.2404,140.3633],
+  "福島県":[37.7503,140.4676],"茨城県":[36.3418,140.4468],"栃木県":[36.5658,139.8836],
+  "群馬県":[36.3911,139.0608],"埼玉県":[35.8617,139.6455],"千葉県":[35.6073,140.1063],
+  "東京都":[35.6895,139.6917],"神奈川県":[35.4437,139.6380],"新潟県":[37.9026,139.0232],
+  "富山県":[36.6953,137.2113],"石川県":[36.5947,136.6256],"福井県":[36.0652,136.2216],
+  "山梨県":[35.6642,138.5686],"長野県":[36.6513,138.1810],"岐阜県":[35.3912,136.7223],
+  "静岡県":[34.9769,138.3831],"愛知県":[35.1815,136.9066],"三重県":[34.7303,136.5086],
+  "滋賀県":[35.0045,135.8686],"京都府":[35.0116,135.7681],"大阪府":[34.6937,135.5023],
+  "兵庫県":[34.6901,135.1955],"奈良県":[34.6851,135.8048],"和歌山県":[34.2261,135.1675],
+  "鳥取県":[35.5039,134.2378],"島根県":[35.4723,133.0505],"岡山県":[34.6555,133.9195],
+  "広島県":[34.3853,132.4553],"山口県":[34.1859,131.4714],"徳島県":[34.0658,134.5593],
+  "香川県":[34.3401,134.0434],"愛媛県":[33.8416,132.7657],"高知県":[33.5597,133.5311],
+  "福岡県":[33.5904,130.4017],"佐賀県":[33.2494,130.2989],"長崎県":[32.7448,129.8737],
+  "熊本県":[32.7898,130.7417],"大分県":[33.2382,131.6126],"宮崎県":[31.9111,131.4239],
+  "鹿児島県":[31.5602,130.5581],"沖縄県":[26.2124,127.6809]
+};
+
+const CAT_LABELS = {free:"無料",nature:"自然体験",indoor:"屋内",outdoor:"屋外",workshop:"ワークショップ"};
+const AGE_LABELS = {preschool:"未就学児",elementary:"小学生"};
+
+const EVENTS = [
+  {title:"川あそびと水生生物調査",pref:"千葉県",place:"養老川ふれあい公園",lat:35.4930,lng:140.1130,date:"2026-07-19",cat:["nature","outdoor"],age:["elementary"],desc:"川に入って生き物をつかまえ、種類を図鑑で調べます。"},
+  {title:"夏野菜の収穫体験ファーム",pref:"茨城県",place:"つくば市民農園",lat:36.0839,lng:140.0764,date:"2026-07-26",cat:["nature","outdoor","workshop"],age:["preschool","elementary"],desc:"トマトやとうもろこしを自分の手で収穫します。"},
+  {title:"雨の日でも遊べる室内あそび広場",pref:"千葉県",place:"千葉市子育て支援館",lat:35.6073,lng:140.1063,date:"2026-07-05",cat:["free","indoor"],age:["preschool"],desc:"ボールプールや絵本コーナーがある無料の屋内広場です。"},
+  {title:"消防車・救急車にのってみよう",pref:"千葉県",place:"千葉市消防局 見学デー",lat:35.6051,lng:140.1233,date:"2026-07-20",cat:["free","indoor"],age:["preschool","elementary"],desc:"本物の消防車両に乗車でき、消防士のお仕事体験もできます。"},
+  {title:"無料開放デー 科学館まるごと体験",pref:"茨城県",place:"茨城県立児童センター",lat:36.3418,lng:140.4468,date:"2026-08-15",cat:["free","indoor"],age:["preschool","elementary"],desc:"年に数回の入館無料デー。実験ショーも開催されます。"},
+  {title:"里山の昆虫採集ツアー",pref:"茨城県",place:"笠間市 里山交流センター",lat:36.3892,lng:140.2536,date:"2026-08-16",cat:["nature","outdoor"],age:["elementary"],desc:"専門ガイドと一緒に虫かごを持って里山を歩きます。"},
+  {title:"海辺の自然かんさつ会 干潟の生き物",pref:"千葉県",place:"谷津干潟",lat:35.6841,lng:140.0011,date:"2026-08-22",cat:["free","nature","outdoor"],age:["preschool","elementary"],desc:"干潟でカニやヤドカリを観察するイベントです。"},
+  {title:"棚田の稲刈り体験",pref:"茨城県",place:"常陸大宮市 棚田",lat:36.5389,lng:140.4128,date:"2026-09-12",cat:["nature","outdoor","workshop"],age:["elementary"],desc:"昔ながらの手刈りで稲刈りを体験します。"},
+  {title:"どろんこ田んぼで泥あそび",pref:"千葉県",place:"成田市 農業体験施設",lat:35.7767,lng:140.3186,date:"2026-09-20",cat:["free","nature","outdoor"],age:["preschool"],desc:"裸足で入れる泥んこ田んぼで思い切り遊べます。"},
+  {title:"牧場でバターづくり体験",pref:"茨城県",place:"奥久慈の牧場",lat:36.7256,lng:140.4256,date:"2026-08-02",cat:["nature","workshop"],age:["preschool","elementary"],desc:"生クリームからバターを作る手作り体験です。"},
+  {title:"雨の日親子ヨガ&絵本タイム",pref:"千葉県",place:"船橋市子育てふらっと",lat:35.6947,lng:139.9829,date:"2026-07-13",cat:["free","indoor"],age:["preschool"],desc:"体を動かした後、絵本の読み聞かせを楽しみます。"},
+  {title:"プラネタリウム 親子で見る星空",pref:"茨城県",place:"つくばエキスポセンター",lat:36.0839,lng:140.1010,date:"2026-08-02",cat:["free","indoor"],age:["preschool","elementary"],desc:"夏の星座をやさしく解説する親子向け上映回です。"}
+];
+
+EVENTS.forEach((e,i)=>{ e.id = `${e.date}-${i}`; });
+
+let state = {region:null, pref:"すべて", cats:new Set(), ages:new Set(), view:"calendar"};
+let calMonth = new Date(2026,6,1);
+let weatherCache = {};
+
+/* ---------- Seasonal photo backdrop ----------
+   Photos are free-to-use stock photos from Pexels (no attribution legally
+   required, but credited below out of courtesy to the photographers). */
+const SEASONS = {
+  spring:{jp:"春",accent:"#3E8E5B",accentDark:"#245C38",wash:"#EAF6FF",
+    photo:"https://images.pexels.com/photos/16154108/pexels-photo-16154108.jpeg?auto=compress&cs=tinysrgb&w=1600",
+    credit:"Photo: Balazs Simon / Pexels"},
+  summer:{jp:"夏",accent:"#0E9C90",accentDark:"#0B655F",wash:"#E4F8F5",
+    photo:"https://images.pexels.com/photos/2878410/pexels-photo-2878410.jpeg?auto=compress&cs=tinysrgb&w=1600",
+    credit:"Photo: Bryan Ricke / Pexels"},
+  autumn:{jp:"秋",accent:"#C1602B",accentDark:"#7C3B18",wash:"#FBEEDA",
+    photo:"https://images.pexels.com/photos/29066987/pexels-photo-29066987.jpeg?auto=compress&cs=tinysrgb&w=1600",
+    credit:"Photo: Bráulio jardim / Pexels"},
+  winter:{jp:"冬",accent:"#2F6FA8",accentDark:"#1F4A70",wash:"#EAF3FA",
+    photo:"https://images.pexels.com/photos/29823030/pexels-photo-29823030.jpeg?auto=compress&cs=tinysrgb&w=1600",
+    credit:"Photo: Raul Ling / Pexels"}
+};
+function seasonKeyOf(monthIndex){
+  if([2,3,4].includes(monthIndex)) return 'spring';
+  if([5,6,7].includes(monthIndex)) return 'summer';
+  if([8,9,10].includes(monthIndex)) return 'autumn';
+  return 'winter';
+}
+
+function applySeasonTheme(monthIndex){
+  const key = seasonKeyOf(monthIndex);
+  const s = SEASONS[key];
+  const header = document.getElementById('heroHeader');
+  header.style.backgroundImage = `url('${s.photo}')`;
+  header.innerHTML = '<div class="scrim"></div>' +
+    `<div class="photo-credit">${s.credit}</div>` +
+    header.querySelector('.hero-inner').outerHTML;
+  document.documentElement.style.setProperty('--season-accent', s.accent);
+  document.documentElement.style.setProperty('--season-accent-dark', s.accentDark);
+  document.documentElement.style.setProperty('--season-wash', s.wash);
+  document.getElementById('seasonBadge').textContent = s.jp;
+  updateStats();
+}
+
+/* ---------- Weather ---------- */
+function weatherIcon(code){
+  if(code===0) return '☀️';
+  if([1,2].includes(code)) return '🌤️';
+  if(code===3) return '☁️';
+  if([45,48].includes(code)) return '🌫️';
+  if([51,53,55,56,57,80,81,82].includes(code)) return '🌦️';
+  if([61,63,65,66,67].includes(code)) return '🌧️';
+  if([71,73,75,77,85,86].includes(code)) return '❄️';
+  if([95,96,99].includes(code)) return '⛈️';
+  return '🌡️';
+}
+
+async function loadAllWeather(){
+  const prefs = [...new Set(EVENTS.map(e=>e.pref))];
+  await Promise.all(prefs.map(async pref=>{
+    const coord = PREF_COORDS[pref];
+    if(!coord) return;
+    const [lat,lon] = coord;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FTokyo&forecast_days=16`;
+    try{
+      const res = await fetch(url);
+      if(!res.ok) return;
+      const data = await res.json();
+      if(data && data.daily){ weatherCache[pref] = data.daily; }
+    }catch(err){ /* offline or blocked: weather simply won't show */ }
+  }));
+  render();
+}
+
+function weatherHtmlFor(ev){
+  const daily = weatherCache[ev.pref];
+  if(!daily) return `<div class="ev-weather muted"><i>🗓️</i>天気予報はイベントの16日前から表示されます</div>`;
+  const idx = daily.time.indexOf(ev.date);
+  if(idx === -1) return `<div class="ev-weather muted"><i>🗓️</i>天気予報はイベントの16日前から表示されます</div>`;
+  const icon = weatherIcon(daily.weathercode[idx]);
+  const tmax = Math.round(daily.temperature_2m_max[idx]);
+  const tmin = Math.round(daily.temperature_2m_min[idx]);
+  const pop = Math.round(daily.precipitation_probability_max[idx]);
+  return `<div class="ev-weather">${icon} 最高${tmax}° / 最低${tmin}°・降水確率${pop}%</div>`;
+}
+
+function initPrefSelect(){
+  const sel = document.getElementById('prefSelect');
+  sel.innerHTML = '<option value="すべて">すべての都道府県</option>' +
+    ALL_PREFS.map(p=>`<option value="${p}">${p}</option>`).join('');
+  sel.addEventListener('change', e=>{ state.pref = e.target.value; render(); });
+}
+
+function refreshRegionButtons(){ /* 地域ボタンは千葉県・茨城県の2県のみのため廃止(都道府県プルダウンのみ使用) */ }
+
+function initChips(){
+  const catBox = document.getElementById('catChips');
+  Object.entries(CAT_LABELS).forEach(([k,label])=>{
+    const c=document.createElement('div');
+    c.className='chip cat'; c.textContent=label; c.dataset.active="false";
+    c.onclick=()=>{
+      if(state.cats.has(k)){state.cats.delete(k);c.dataset.active="false";}
+      else{state.cats.add(k);c.dataset.active="true";}
+      render();
+    };
+    catBox.appendChild(c);
+  });
+  const ageBox = document.getElementById('ageChips');
+  Object.entries(AGE_LABELS).forEach(([k,label])=>{
+    const c=document.createElement('div');
+    c.className='chip age'; c.textContent=label; c.dataset.active="false";
+    c.onclick=()=>{
+      if(state.ages.has(k)){state.ages.delete(k);c.dataset.active="false";}
+      else{state.ages.add(k);c.dataset.active="true";}
+      render();
+    };
+    ageBox.appendChild(c);
+  });
+}
+
+function matchesFilter(ev){
+  if(state.pref!=="すべて" && ev.pref!==state.pref) return false;
+  if(state.cats.size>0 && ![...state.cats].some(c=>ev.cat.includes(c))) return false;
+  if(state.ages.size>0 && ![...state.ages].some(a=>ev.age.includes(a))) return false;
+  return true;
+}
+
+function filteredEvents(){ return EVENTS.filter(matchesFilter); }
+
+function updateStats(){
+  document.getElementById('stat-total').textContent = EVENTS.length;
+  document.getElementById('stat-free').textContent = EVENTS.filter(e=>e.cat.includes('free')).length;
+  document.getElementById('stat-pref').textContent = new Set(EVENTS.map(e=>e.place)).size;
+}
+
+function renderCalendar(){
+  const grid = document.getElementById('calGrid');
+  const y = calMonth.getFullYear(), m = calMonth.getMonth();
+  document.getElementById('monthLabel').textContent = `${y}年 ${m+1}月`;
+  grid.innerHTML='';
+  const dows=['日','月','火','水','木','金','土'];
+  dows.forEach((d,i)=>{
+    const el=document.createElement('div');
+    el.className='cal-dow'+(i===0?' sun':i===6?' sat':'');
+    el.textContent=d;
+    grid.appendChild(el);
+  });
+  const firstDow = new Date(y,m,1).getDay();
+  const daysInMonth = new Date(y,m+1,0).getDate();
+  const todayStr = new Date().toISOString().slice(0,10);
+  const evs = filteredEvents();
+
+  for(let i=0;i<firstDow;i++){
+    const c=document.createElement('div'); c.className='cal-cell empty'; grid.appendChild(c);
+  }
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const cell=document.createElement('div');
+    cell.className='cal-cell'+(dateStr===todayStr?' today':'');
+    const dayEvents = evs.filter(e=>e.date===dateStr);
+    cell.innerHTML = `<div class="d-num">${d}</div>`;
+    if(dayEvents.length){
+      const dots = document.createElement('div'); dots.className='cal-dots';
+      dayEvents.slice(0,6).forEach(e=>{
+        const primaryCat = e.cat.find(c=>['free','nature','indoor','workshop'].includes(c)) || e.cat[0];
+        const span=document.createElement('span');
+        span.className='dot-'+(primaryCat==='outdoor'?'nature':primaryCat);
+        dots.appendChild(span);
+      });
+      cell.appendChild(dots);
+      if(dayEvents.length>3){
+        const more=document.createElement('div'); more.className='cal-more'; more.textContent=dayEvents.length+'件';
+        cell.appendChild(more);
+      }
+    }
+    cell.onclick=()=>renderDayPanel(dateStr, dayEvents);
+    grid.appendChild(cell);
+  }
+  renderDayPanel(null, []);
+}
+
+function renderDayPanel(dateStr, events){
+  const panel = document.getElementById('dayPanel');
+  if(!dateStr){ panel.innerHTML = '<p style="color:#79806E;font-size:13.5px;">カレンダーの日付をクリックすると、その日のイベントが表示されます。</p>'; return; }
+  const [y,m,d] = dateStr.split('-');
+  if(events.length===0){
+    panel.innerHTML = `<h3>${m}月${d}日</h3><div class="empty-state"><div class="big">☂️</div>この日はまだイベントがありません。日付を変えて探してみましょう。</div>`;
+    return;
+  }
+  panel.innerHTML = `<h3>${m}月${d}日 のイベント (${events.length}件)</h3><div class="card-list">${events.map(cardHtml).join('')}</div>`;
+}
+
+function cardHtml(e){
+  const tagHtml = e.cat.map(c=>`<span class="tag ${c}">${CAT_LABELS[c]}</span>`).join('') +
+    e.age.map(a=>`<span class="tag age">${AGE_LABELS[a]}</span>`).join('');
+  const [y,m,d] = e.date.split('-');
+  const saved = isSaved(e.id);
+  const shareText = `【まちの冒険手帳】${e.title}\n${m}月${d}日・${e.pref} ${e.place}\n${e.desc}`;
+  const lineUrl = `https://line.me/R/msg/text/?${encodeURIComponent(shareText)}`;
+  return `<div class="event-card">
+    <div class="ev-date">${m}月${d}日・${e.pref}</div>
+    <p class="ev-title">${e.title}</p>
+    <div class="ev-place">📍 ${e.place}</div>
+    <div class="ev-tags">${tagHtml}</div>
+    <div class="ev-desc">${e.desc}</div>
+    ${weatherHtmlFor(e)}
+    <div class="ev-actions">
+      <a class="ev-btn line" href="${lineUrl}" target="_blank" rel="noopener">LINEで共有</a>
+      <button class="ev-btn save" data-saved="${saved}" onclick="toggleSave('${e.id}', this)">${saved ? '★ 保存済み' : '☆ 保存する'}</button>
+    </div>
+  </div>`;
+}
+
+function isSaved(id){
+  try{
+    const list = JSON.parse(localStorage.getItem('savedEvents') || '[]');
+    return list.includes(id);
+  }catch(err){ return false; }
+}
+function toggleSave(id, btn){
+  try{
+    let list = JSON.parse(localStorage.getItem('savedEvents') || '[]');
+    if(list.includes(id)){
+      list = list.filter(x=>x!==id);
+      btn.dataset.saved = "false";
+      btn.textContent = "☆ 保存する";
+    } else {
+      list.push(id);
+      btn.dataset.saved = "true";
+      btn.textContent = "★ 保存済み";
+    }
+    localStorage.setItem('savedEvents', JSON.stringify(list));
+  }catch(err){ /* localStorageが使えない環境では保存機能のみ無効になります */ }
+}
+
+function renderList(){
+  const box = document.getElementById('listCards');
+  const evs = filteredEvents().sort((a,b)=>a.date.localeCompare(b.date));
+  if(evs.length===0){
+    box.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="big">🔍</div>条件に合うイベントが見つかりませんでした。フィルターを変えてみてください。</div>`;
+    return;
+  }
+  box.innerHTML = evs.map(cardHtml).join('');
+}
+
+function render(){
+  refreshRegionButtons();
+  if(state.view==='calendar'){ renderCalendar(); } else { renderList(); }
+}
+
+document.getElementById('prevMonth').onclick=()=>{calMonth.setMonth(calMonth.getMonth()-1); applySeasonTheme(calMonth.getMonth()); renderCalendar();};
+document.getElementById('nextMonth').onclick=()=>{calMonth.setMonth(calMonth.getMonth()+1); applySeasonTheme(calMonth.getMonth()); renderCalendar();};
+document.getElementById('btnCal').onclick=()=>{
+  state.view='calendar';
+  document.getElementById('btnCal').classList.add('active');
+  document.getElementById('btnList').classList.remove('active');
+  document.getElementById('calendarView').style.display='block';
+  document.getElementById('listView').style.display='none';
+  render();
+};
+document.getElementById('btnList').onclick=()=>{
+  state.view='list';
+  document.getElementById('btnList').classList.add('active');
+  document.getElementById('btnCal').classList.remove('active');
+  document.getElementById('calendarView').style.display='none';
+  document.getElementById('listView').style.display='block';
+  render();
+};
+
+applySeasonTheme(calMonth.getMonth());
+initPrefSelect();
+initChips();
+updateStats();
+render();
+loadAllWeather();
+
+/* ---------- 現在地から近いイベント ---------- */
+function haversineKm(lat1,lng1,lat2,lng2){
+  const R=6371;
+  const dLat=(lat2-lat1)*Math.PI/180;
+  const dLng=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+let gmap = null;
+document.getElementById('btnLocate').onclick = () => {
+  const msg = document.getElementById('mapMsg');
+  if(!('geolocation' in navigator)){
+    msg.textContent = 'この端末では位置情報が利用できません。';
+    return;
+  }
+  msg.textContent = '現在地を取得しています…';
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const {latitude, longitude} = pos.coords;
+    showNearby(latitude, longitude);
+  }, err=>{
+    msg.textContent = '位置情報を取得できませんでした(許可設定をご確認ください)。';
+  }, {enableHighAccuracy:false, timeout:8000});
+};
+
+function showNearby(userLat, userLng){
+  const msg = document.getElementById('mapMsg');
+  const mapDiv = document.getElementById('mapEl');
+  const listDiv = document.getElementById('nearbyList');
+
+  const withDist = EVENTS.filter(e=>typeof e.lat==='number' && typeof e.lng==='number')
+    .map(e=>({...e, dist: haversineKm(userLat,userLng,e.lat,e.lng)}))
+    .sort((a,b)=>a.dist-b.dist)
+    .slice(0,8);
+
+  if(withDist.length===0){
+    msg.textContent = '座標情報が登録されたイベントが見つかりませんでした。';
+    listDiv.innerHTML = '';
+    return;
+  }
+  msg.textContent = `現在地から近い順に ${withDist.length} 件表示しています。`;
+
+  if(typeof google !== 'undefined' && google.maps){
+    mapDiv.style.display = 'block';
+    if(!gmap){
+      gmap = new google.maps.Map(mapDiv, {center:{lat:userLat,lng:userLng}, zoom:10});
+    } else {
+      gmap.setCenter({lat:userLat,lng:userLng});
+    }
+    new google.maps.Marker({position:{lat:userLat,lng:userLng}, map:gmap, label:'現在地', icon:{url:'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28"><circle cx="14" cy="14" r="10" fill="%232F6FA8" stroke="white" stroke-width="3"/></svg>'}});
+    withDist.forEach(e=>{
+      new google.maps.Marker({
+        position:{lat:e.lat,lng:e.lng}, map:gmap, title:e.title
+      });
+    });
+  } else {
+    mapDiv.style.display = 'none';
+    msg.textContent += '(地図の読み込みに失敗したため、リストのみ表示しています)';
+  }
+
+  listDiv.innerHTML = withDist.map(e=>{
+    const base = cardHtml(e);
+    return base.replace('<div class="ev-date">', `<div class="ev-date">${e.dist.toFixed(1)}km・`);
+  }).join('');
+}
+
+/* ---------- Firestoreからのデータ反映(準備ができたら自動的に切り替わります) ---------- */
+window.__applyRemoteEvents = function(remoteEvents){
+  if(!Array.isArray(remoteEvents) || remoteEvents.length===0) return;
+  EVENTS.length = 0;
+  remoteEvents.forEach(e=>EVENTS.push(e));
+  EVENTS.forEach((e,i)=>{ if(!e.id) e.id = `${e.date}-${i}`; });
+  updateStats();
+  render();
+  console.log(`Firestoreから${remoteEvents.length}件のイベントを読み込みました。`);
+};
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(err=>console.log('SW登録エラー(ローカルファイルを直接開いている場合は正常です):', err));
+  });
+}
+
+</script>
+
+<script type="module">
+  // Firestoreの「events」コレクションを読み込みます。まだデータが無い場合は
+  // 何もせず、既存のサンプルデータがそのまま表示されます(安全に共存できます)。
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAnXj9myLF9RxnINxdkrMMTihSTBGUUi0E",
+    authDomain: "machi-bouken-70db7.firebaseapp.com",
+    projectId: "machi-bouken-70db7",
+    storageBucket: "machi-bouken-70db7.firebasestorage.app",
+    messagingSenderId: "315009792930",
+    appId: "1:315009792930:web:b41430d7984553e44590fb"
+  };
+
+  try{
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const snap = await getDocs(collection(db, "events"));
+    if(!snap.empty){
+      const fsEvents = [];
+      snap.forEach(doc=>fsEvents.push({id: doc.id, ...doc.data()}));
+      if(window.__applyRemoteEvents) window.__applyRemoteEvents(fsEvents);
+    } else {
+      console.log("Firestoreの'events'コレクションはまだ空のようです。サンプルデータを表示しています。");
+    }
+  }catch(err){
+    console.log("Firestore読み込みエラー(サンプルデータのまま表示します):", err);
+  }
+</script>
+</body>
+</html>
