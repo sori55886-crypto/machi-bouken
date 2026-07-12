@@ -164,20 +164,33 @@ JSON配列だけを出力してください。1件も見つからない場合は
 """
 
 
-def extract_events_with_gemini(url, pref, page_text, api_key):
+def extract_events_with_gemini(url, pref, page_text, api_key, max_retries=1):
     body = {
         "contents": [{"parts": [{"text": build_prompt(url, pref, page_text)}]}],
         "generationConfig": {"temperature": 0.1, "maxOutputTokens": 4000},
     }
-    try:
-        resp = requests.post(GEMINI_URL, params={"key": api_key}, json=body, timeout=60)
-        if not resp.ok:
-            print(f"    Geminiエラー本文: {resp.text[:500]}")
-        resp.raise_for_status()
-        data = resp.json()
-        text = data["candidates"][0]["content"]["parts"][0]["text"]
-    except Exception as e:
-        print(f"    Gemini呼び出し失敗: {e}")
+
+    text = None
+    for attempt in range(max_retries + 1):
+        try:
+            resp = requests.post(GEMINI_URL, params={"key": api_key}, json=body, timeout=60)
+            if resp.status_code == 429:
+                print(f"    レート制限(429)。しばらく待って再試行します。")
+                print(f"    詳細: {resp.text[:400]}")
+                time.sleep(30)
+                continue
+            if not resp.ok:
+                print(f"    Geminiエラー本文: {resp.text[:500]}")
+            resp.raise_for_status()
+            data = resp.json()
+            text = data["candidates"][0]["content"]["parts"][0]["text"]
+            break
+        except Exception as e:
+            print(f"    Gemini呼び出し失敗: {e}")
+            return []
+
+    if text is None:
+        print("    再試行しても失敗したため、このページはスキップします")
         return []
 
     text = text.strip()
@@ -245,7 +258,7 @@ def main():
             continue
 
         events = extract_events_with_gemini(url, pref, page_text, gemini_key)
-        time.sleep(2)
+        time.sleep(13)  # 無料枠は1分間に5回までのため、間隔を空ける
         print(f"  {len(events)}件のイベントを抽出")
 
         for event in events:
