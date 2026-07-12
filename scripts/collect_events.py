@@ -191,7 +191,7 @@ def extract_events_with_gemini(url, pref, page_text, api_key, max_retries=1):
 
     if text is None:
         print("    再試行しても失敗したため、このページはスキップします")
-        return []
+        return None
 
     text = text.strip()
     text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
@@ -251,14 +251,19 @@ def main():
         print(f"\n取得中: {url}")
         page_text = fetch_page_text(url)
 
-        seen_ref.document(page_hash).set({"url": url, "checked_at": now.isoformat()})
-
         if not page_text or len(page_text) < 200:
-            print("  本文が短すぎるためスキップ")
+            print("  本文が短すぎるためスキップ(次回また試します)")
             continue
 
         events = extract_events_with_gemini(url, pref, page_text, gemini_key)
         time.sleep(13)  # 無料枠は1分間に5回までのため、間隔を空ける
+
+        if events is None:
+            print("  Gemini呼び出しが最終的に失敗したため、次回また試します")
+            continue
+
+        # ここまで来たら実際に処理できたページなので「取得済み」として記録する
+        seen_ref.document(page_hash).set({"url": url, "checked_at": now.isoformat()})
         print(f"  {len(events)}件のイベントを抽出")
 
         for event in events:
